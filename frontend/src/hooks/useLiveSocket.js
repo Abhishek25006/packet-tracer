@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 const MAX_FEED_LENGTH = 200
+const API_BASE = import.meta.env.VITE_API_URL || ''
+const WS_BASE = API_BASE.replace(/^http/, 'ws')
 
 export function useLiveSocket() {
   const [connected, setConnected] = useState(false)
@@ -8,23 +10,19 @@ export function useLiveSocket() {
   const [packetCount, setPacketCount] = useState(0)
   const [feed, setFeed] = useState([])
   const [summary, setSummary] = useState(null)
-  const [throughput, setThroughput] = useState([]) // packets/sec samples for the pulse line
+  const [throughput, setThroughput] = useState([])
   const wsRef = useRef(null)
   const countSinceTickRef = useRef(0)
 
   useEffect(() => {
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const url = `${proto}://${window.location.host}/ws/live`
+    const url = `${WS_BASE}/ws/live`
     const ws = new WebSocket(url)
     wsRef.current = ws
-
     ws.onopen = () => setConnected(true)
     ws.onclose = () => setConnected(false)
     ws.onerror = () => setConnected(false)
-
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data)
-
       if (msg.type === 'packet') {
         countSinceTickRef.current += 1
         setPacketCount((c) => c + 1)
@@ -39,11 +37,9 @@ export function useLiveSocket() {
         setPacketCount(msg.data.packet_count)
       }
     }
-
     return () => ws.close()
   }, [])
 
-  // Sample throughput once a second for the pulse visualization
   useEffect(() => {
     const interval = setInterval(() => {
       setThroughput((prev) => {
@@ -56,7 +52,7 @@ export function useLiveSocket() {
   }, [])
 
   const startCapture = useCallback(async (opts = {}) => {
-    const res = await fetch('/api/capture/start', {
+    const res = await fetch(`${API_BASE}/api/capture/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ iface: opts.iface ?? null, bpf_filter: opts.bpfFilter ?? null, count: opts.count ?? 0 }),
@@ -66,7 +62,7 @@ export function useLiveSocket() {
   }, [])
 
   const stopCapture = useCallback(async () => {
-    const res = await fetch('/api/capture/stop', { method: 'POST' })
+    const res = await fetch(`${API_BASE}/api/capture/stop`, { method: 'POST' })
     if (res.ok) setRunning(false)
     return res
   }, [])
@@ -74,7 +70,7 @@ export function useLiveSocket() {
   const analyzePcap = useCallback(async (file) => {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await fetch('/api/pcap/analyze', { method: 'POST', body: formData })
+    const res = await fetch(`${API_BASE}/api/pcap/analyze`, { method: 'POST', body: formData })
     if (res.ok) {
       const data = await res.json()
       setSummary(data)
