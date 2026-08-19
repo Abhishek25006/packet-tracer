@@ -32,6 +32,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/")
+async def root():
+    return {
+        "service": "NetPulse",
+        "status": "running",
+        "docs": "/docs",
+    }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "capture_running": capture.running}
+
+
 # --- Global capture state -------------------------------------------------
 capture = PacketCapture()
 capture_thread: threading.Thread | None = None
