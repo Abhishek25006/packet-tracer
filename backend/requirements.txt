@@ -1,3 +1,5 @@
-     flask
-     scapy
-     gunicorn
+fastapi
+uvicorn[standard]
+scapy
+python-multipart
+websockets
