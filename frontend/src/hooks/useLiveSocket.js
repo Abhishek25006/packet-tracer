@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 const MAX_FEED_LENGTH = 200
-const API_BASE = import.meta.env.VITE_API_URL || ''
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const WS_BASE = API_BASE.replace(/^http/, 'ws')
 
 export function useLiveSocket() {
@@ -18,9 +18,11 @@ export function useLiveSocket() {
     const url = `${WS_BASE}/ws/live`
     const ws = new WebSocket(url)
     wsRef.current = ws
+
     ws.onopen = () => setConnected(true)
     ws.onclose = () => setConnected(false)
     ws.onerror = () => setConnected(false)
+
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data)
       if (msg.type === 'packet') {
@@ -37,6 +39,7 @@ export function useLiveSocket() {
         setPacketCount(msg.data.packet_count)
       }
     }
+
     return () => ws.close()
   }, [])
 
